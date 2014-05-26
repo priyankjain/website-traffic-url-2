@@ -1,62 +1,105 @@
 <?php
+/*
+ * Copyright 2011 Google Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+session_start();
+
+require_once 'Google/Client.php';
+require_once 'Google/Service/Urlshortener.php';
 require_once("config.php");
 require_once('twitteroauth/twitteroauth.php');
 set_time_limit(36000);
-function plain_curl($url = '', $var = '', $header = false, $nobody = false) {
-    $curl = curl_init($url);
-    curl_setopt($curl, CURLOPT_NOBODY, $header);
-    curl_setopt($curl, CURLOPT_HEADER, $nobody);
-    curl_setopt($curl, CURLOPT_TIMEOUT, 10);
-    if ($var) {
-        curl_setopt($curl, CURLOPT_POST, true);
-        curl_setopt($curl, CURLOPT_POSTFIELDS, $var);
-    }
-    curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, false);
-    curl_setopt($curl, CURLOPT_SSL_VERIFYHOST, 2);
-    curl_setopt($curl, CURLOPT_FOLLOWLOCATION, true);
-    curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
-    $result = curl_exec($curl);
-    curl_close($curl);
-    return $result;
+
+/************************************************
+  ATTENTION: Fill in these values! Make sure
+  the redirect URI is to this page, e.g:
+  http://localhost:8080/user-example.php
+ ************************************************/
+ $client_id = $config['client_id'];
+ $client_secret = $config['client_secret'];
+ $redirect_uri = $config['redirect_uri'];
+
+/************************************************
+  Make an API request on behalf of a user. In
+  this case we need to have a valid OAuth 2.0
+  token for the user, so we need to send them
+  through a login flow. To do this we need some
+  information from our API console project.
+ ************************************************/
+$client = new Google_Client();
+$client->setClientId($client_id);
+$client->setClientSecret($client_secret);
+$client->setRedirectUri($redirect_uri);
+$client->addScope("https://www.googleapis.com/auth/urlshortener");
+
+/************************************************
+  When we create the service here, we pass the
+  client to it. The client then queries the service
+  for the required scopes, and uses that when
+  generating the authentication URL later.
+ ************************************************/
+$service = new Google_Service_Urlshortener($client);
+
+/************************************************
+  If we're logging out we just need to clear our
+  local access token in this case
+ ************************************************/
+if (isset($_REQUEST['logout'])) {
+  unset($_SESSION['access_token']);
 }
 
-
-function fetch_value($str, $find_start, $find_end) {
-    $start = strpos($str, $find_start);
-    if ($start === false) {
-        return "";
-    }
-    $length = strlen($find_start);
-    $end = strpos(substr($str, $start + $length), $find_end);
-    return trim(substr($str, $start + $length, $end));
-}
-function fetch_value_notrim($str, $find_start, $find_end) {
-    $start = strpos($str, $find_start);
-    if ($start === false) {
-        return "";
-    }
-    $length = strlen($find_start);
-    $end = strpos(substr($str, $start + $length), $find_end);
-    return substr($str, $start + $length, $end);
+/************************************************
+  If we have a code back from the OAuth 2.0 flow,
+  we need to exchange that with the authenticate()
+  function. We store the resultant access token
+  bundle in the session, and redirect to ourself.
+ ************************************************/
+if (isset($_GET['code'])) {
+  $client->authenticate($_GET['code']);
+  $_SESSION['access_token'] = $client->getAccessToken();
+  $redirect = 'http://' . $_SERVER['HTTP_HOST'] . $_SERVER['PHP_SELF'];
+  header('Location: ' . filter_var($redirect, FILTER_SANITIZE_URL));
 }
 
-function cleanup($response){
-    $response=str_replace("\n", "",$response);
-    $response=str_replace("\r", "",$response);
-    $response=str_replace("\t", "",$response);
-    $response=str_replace(" ", "",$response);
-    return $response;
+/************************************************
+  If we have an access token, we can make
+  requests, else we generate an authentication URL.
+ ************************************************/
+if (isset($_SESSION['access_token']) && $_SESSION['access_token']) {
+  $client->setAccessToken($_SESSION['access_token']);
+} else {
+  $authUrl = $client->createAuthUrl();
 }
 
-//Authenticate to twitter
+/************************************************
+  If we're signed in and have a request to shorten
+  a URL, then we create a new URL object, set the
+  unshortened URL, and call the 'insert' method on
+  the 'url' resource. Note that we re-store the
+  access_token bundle, just in case anything
+  changed during the request - the main thing that
+  might happen here is the access token itself is
+  refreshed if the application has offline access.
+ ************************************************/
+if ($client->getAccessToken()) {
+  //Authenticate to twitter
 $app_no = 0;
 $connection = new TwitterOAuth($config[0]['key'],$config[0]['secret'],$config[0]['access_token'],$config[0]['access_token_secret']);
 
-//Get bit.ly API keys
-$bitly_access_token = $config['bitly_access_token'];
-
-//Get ow.ly API keys
-$owly_access_token = $config['owly_access_token'];
+//Google api key
+$googl = $config['googl_api_key'];
 
 //Get long url
 $long_url = $config['longurl'];
@@ -70,35 +113,30 @@ fclose($file);
 $tco_file = fopen("tco.txt","a+");
 
 $count_file = fopen("count.txt","w");
+
+  $url = new Google_Service_Urlshortener_Url();
+  $url->longUrl = $long_url;
+  $short = $service->url->insert($url);
+  $_SESSION['access_token'] = $client->getAccessToken();
 function shorten_url()
 {
-    global $bitly_access_token,$long_url,$owly_access_token, $count_file,$count,$tco_file,$connection,$app_no,$config;
-    //Get short link from bit.ly
+    global $service,$googl,$long_url,$count_file,$count,$tco_file,$connection,$app_no,$config;
 
     $urls=array();
-    for($i=0; $i<3;$i++){
+    for($i=0; $i<6;$i++){
         $response = null;
         $error = true;
         while($error){
-            $response = plain_curl ("https://api-ssl.bitly.com/v3/shorten","access_token=".$bitly_access_token."&longUrl=".$long_url."?".$count);
-            echo $response.'<br/>';
-            $response = json_decode($response);
-            if($response->status_code == 200) $error = false;
+            $url = new Google_Service_Urlshortener_Url();
+            $url->longUrl = $long_url;
+            $short = $service->url->insert($url);
+            var_dump($short);
+            echo '<br/>';
+            if(empty($short->error) || !empty($short->id)) $error = false;
             else sleep(1);
         }
-        $urls[] = $response->data->url;
+        $urls[] = $short->id;
         
-        //Get short link from ow.ly
-        $response = null;
-        $error = true;
-        while($error){
-            $response = plain_curl ("http://ow.ly/api/1.1/url/shorten","apiKey=".$owly_access_token."&longUrl=".$long_url."?".$count);
-            echo $response.'<br/>';
-            $response = json_decode($response);
-            if(empty($response->error)) $error = false;
-            else sleep(1);
-        }
-        $urls[] = $response->results->shortUrl;
         $count++;
     }
     $tweeted = false;
@@ -111,6 +149,8 @@ function shorten_url()
             sleep(600);
         }
         $status = $connection->post('statuses/update', array('status' => $tweet));
+        var_dump($status);
+        echo '<br/>';
         if(empty($status->errors))
         {
             for($i=0;$i<6;$i++){
@@ -134,10 +174,18 @@ function shorten_url()
     fputs($count_file,$count);
 }
 
-//Call the shortening apis and store the shortened links
-for($i = 0; $i <= 10000; $i++)
 shorten_url();
-
 fclose($tco_file);
 fclose($count_file);
+}
+
 ?>
+<div class="box">
+  <div class="request">
+    <?php if (isset($authUrl)): ?>
+      <a class='login' href='<?php echo $authUrl; ?>'>Connect Me!</a>
+   
+    <?php endif ?>
+  </div>
+
+</div>
