@@ -1,3 +1,5 @@
+EDIT: This project now uses goo.gl shortening service with OAuth 2.0 to generate different small urls for the same long url
+
 This is what I need the bot to achieve: -->
 
 1. open http://securepasswordgenerator.net

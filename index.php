@@ -98,21 +98,10 @@ if ($client->getAccessToken()) {
 $app_no = 0;
 $connection = new TwitterOAuth($config[0]['key'],$config[0]['secret'],$config[0]['access_token'],$config[0]['access_token_secret']);
 
-//Google api key
-$googl = $config['googl_api_key'];
-
 //Get long url
 $long_url = $config['longurl'];
-
-//Get count
-$file = fopen("count.txt","r");
-$count = fgets($file);
-fclose($file);
-
 //Open twitterlinks file in append mode to write links to
 $tco_file = fopen("tco.txt","a+");
-
-$count_file = fopen("count.txt","w");
 
   $url = new Google_Service_Urlshortener_Url();
   $url->longUrl = $long_url;
@@ -120,7 +109,7 @@ $count_file = fopen("count.txt","w");
   $_SESSION['access_token'] = $client->getAccessToken();
 function shorten_url()
 {
-    global $service,$googl,$long_url,$count_file,$count,$tco_file,$connection,$app_no,$config;
+    global $service,$googl,$long_url,$tco_file,$connection,$app_no,$config;
 
     $urls=array();
     for($i=0; $i<6;$i++){
@@ -136,8 +125,6 @@ function shorten_url()
             else sleep(1);
         }
         $urls[] = $short->id;
-        
-        $count++;
     }
     $tweeted = false;
     $tweet= implode(" ",$urls);
@@ -170,13 +157,10 @@ function shorten_url()
         }
 
     }
-    rewind($count_file);
-    fputs($count_file,$count);
 }
-
+for($i=0;$i<10000;$i++)
 shorten_url();
 fclose($tco_file);
-fclose($count_file);
 }
 
 ?>
