@@ -1,0 +1,10 @@
+1. Install WAMP on your windows
+2. Goto C:/wampp/www/ and extract the code files there
+3. Make sure php curl extension is on and max_execution_time is 36000 and memory_limit is very high
+4. Set the APi keys in config.php. Each computer should have different APi keys in config.php
+5. Set the count in count.txt (This the value which will be appended to the longurl, so if count.txt contains 0, first http://example.com?0 would be shortened, http://example.com?1 would be shortened next, http://example.com?2 would be shortened next and so on)
+IF you are setting up 3 computers to generate t.co links for http://example.com, count.txt should be 0 for one computer,
+20000 for another computer and 40000 for the last one.
+5. Execute the program by visiting http://localhost/website-traffic-urls
+6. The t.co links would be output in the t.co links
+7. Make sure that you allow the files would be written even after 15-20 minutes of closing the browser/tab, this is because there are some background processes writing to the file
