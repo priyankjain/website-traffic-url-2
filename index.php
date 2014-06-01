@@ -140,7 +140,7 @@ function shorten_url()
               echo 'Sleeping for 10 minutes as either all four twitter API keys are invalid or daily status update limit has been reached for all';
               sleep(600);
           }
-          $status = $connection->post('statuses/update', array('status' => $tweet.' '.$k));
+          $status = $connection->post('statuses/update', array('status' => $tweet));
           var_dump($status);
           echo '<br/>';
           if(empty($status->errors))
