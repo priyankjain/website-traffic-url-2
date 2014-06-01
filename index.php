@@ -115,7 +115,7 @@ function shorten_url()
     for($i=0; $i<6;$i++){
         $response = null;
         $error = true;
-        while($error){
+        while($error && $i==0){
             $url = new Google_Service_Urlshortener_Url();
             $url->longUrl = $long_url;
             $short = $service->url->insert($url);
@@ -126,37 +126,43 @@ function shorten_url()
         }
         $urls[] = $short->id;
     }
-    $tweeted = false;
+    
     $tweet= implode(" ",$urls);
-    $limit_count = 0;
-    $status = null;
-    while(! $tweeted){
-        if($limit_count == 4) {
-            echo 'Sleeping for 10 minutes as either all four twitter API keys are invalid or daily status update limit has been reached for all';
-            sleep(600);
-        }
-        $status = $connection->post('statuses/update', array('status' => $tweet));
-        var_dump($status);
-        echo '<br/>';
-        if(empty($status->errors))
-        {
-            for($i=0;$i<6;$i++){
-                if(isset($status->entities->urls[$i]))
-                fputs($tco_file,$status->entities->urls[$i]->url.PHP_EOL);
-            }
-            $tweeted = true;
-        }
-        else
-        {
-            $limit_count++;
-            echo '<br/>Credentials '.$app_no.' rate limited<br/>';
-            var_dump($status);
-            $app_no = ($app_no+1) % 4;
-            $connection = new TwitterOAuth($config[$app_no]['key'],$config[$app_no]['secret'],$config[$app_no]['access_token'],$config[$app_no]['access_token_secret']);
-            //Code to change to next api
-        }
 
-    }
+    $tweet = str_replace("http://","",$tweet);
+    
+    
+      $tweeted = false;
+      $limit_count = 0;
+      $status = null;
+      while(! $tweeted){
+          if($limit_count == 61) {
+              echo 'Sleeping for 10 minutes as either all four twitter API keys are invalid or daily status update limit has been reached for all';
+              sleep(600);
+          }
+          $status = $connection->post('statuses/update', array('status' => $tweet.' '.$k));
+          var_dump($status);
+          echo '<br/>';
+          if(empty($status->errors))
+          {
+              for($i=0;$i<6;$i++){
+                  if(isset($status->entities->urls[$i]))
+                  fputs($tco_file,$status->entities->urls[$i]->url.PHP_EOL);
+              }
+              $tweeted = true;
+          }
+          else
+          {
+              $limit_count++;
+              echo '<br/>Credentials '.$app_no.' rate limited<br/>';
+              var_dump($status);
+              $app_no = ($app_no+1) % 61;
+              $connection = new TwitterOAuth($config[$app_no]['key'],$config[$app_no]['secret'],$config[$app_no]['access_token'],$config[$app_no]['access_token_secret']);
+              //Code to change to next api
+          }
+
+      }
+    
 }
 for($i=0;$i<10000;$i++)
 shorten_url();
