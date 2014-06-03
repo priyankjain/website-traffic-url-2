@@ -99,26 +99,34 @@ $app_no = 0;
 $connection = new TwitterOAuth($config[0]['key'],$config[0]['secret'],$config[0]['access_token'],$config[0]['access_token_secret']);
 
 //Get long url
-$long_url = $config['longurl'];
+$long_url = $config['longurls'];
 //Open twitterlinks file in append mode to write links to
 $tco_file = fopen("tco.txt","a+");
-
-  $url = new Google_Service_Urlshortener_Url();
-  $url->longUrl = $long_url;
-  $short = $service->url->insert($url);
+$current_percentage = 0;
   $_SESSION['access_token'] = $client->getAccessToken();
+function url_selector($long_url,$current_percentage){
+  $size = count($long_url);
+  $current = 0;
+  for($i=0; $i< $size; $i++){
+      $current += $long_url[$i][1];
+      if($current_percentage<$current) return $long_url[$i][0];
+  }
+}
 function shorten_url()
 {
-    global $service,$googl,$long_url,$tco_file,$connection,$app_no,$config;
-
+    global $service,$googl,$long_url,$tco_file,$connection,$app_no,$config,$current_percentage;
+    $cur_long_url = url_selector($long_url,$current_percentage);
+    $current_percentage++;
+    $current_percentage%=100;
     $urls=array();
     for($i=0; $i<6;$i++){
         $response = null;
         $error = true;
         while($error && $i==0){
             $url = new Google_Service_Urlshortener_Url();
-            $url->longUrl = $long_url;
+            $url->longUrl = $cur_long_url;
             $short = $service->url->insert($url);
+            echo "Shortening the long url: ".$cur_long_url." <br/>";
             var_dump($short);
             echo '<br/>';
             if(empty($short->error) || !empty($short->id)) $error = false;

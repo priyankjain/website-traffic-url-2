@@ -437,8 +437,12 @@ $config[60]['secret'] = "API_SECRET";
 $config[60]['access_token'] = "ACCESS_TOKEN";
 $config[60]['access_token_secret'] = "ACCESS_TOKEN_SECRET";
 
-$config['client_id']='699545065455-std2pkofbch6572gnrkfp7pnt4a8lg24.apps.googleusercontent.com';
-$config['client_secret']='JRSBYnsi1DGp_mJOFa8nJ7nN';
-$config['redirect_uri']='http://annuitycashout.info/website-traffic-urls-2/index.php';
-$config['longurl'] = "http://topcarinsurances.com";//The long url to be shortened
+$config['client_id']='363553822676-vtbuq1sppr2kj2mpga9mv92a2fpemugq.apps.googleusercontent.com';
+$config['client_secret']='FDbqxLhPiKXfvvLG03V47i3n';
+$config['redirect_uri']='http://localhost/website-traffic-urls-2/index.php';
+$config['longurls'] = array(
+	array("http://topcarinsurances.com",80),
+	array("http://topcarinsurances.com/top-car-insurances/",10),
+	array("http://topcarinsurances.com/cheap-car-insurances/",10),
+);//The long url to be shortened
 ?>
